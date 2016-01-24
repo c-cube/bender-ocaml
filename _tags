@@ -1,0 +1,4 @@
+<src>: include
+<src/**/*>: package(ppx_deriving_yojson), package(nanomsg), \
+                package(containers), package(yojson), package(ppx_deriving.show)
+<**/*.ml>: warn_A, warn(-4), warn(-39)
