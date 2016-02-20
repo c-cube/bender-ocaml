@@ -4,6 +4,7 @@
 (** {1 Client} *)
 
 type 'a or_error = [`Ok of 'a | `Error of string]
+type json = Yojson.Safe.json
 
 type t
 (** Connection to bender *)
@@ -28,7 +29,7 @@ type user = string
 type irc_end_point =
   | Chan of chan * user
   | User of user
-  [@@deriving yojson, show]
+  [@@deriving show]
 
 (** Command sent to the server *)
 type command =
@@ -37,7 +38,10 @@ type command =
   | Part of chan
   | Reconnect
   | Exit
-  [@@deriving yojson, show]
+  [@@deriving show]
+
+val command_to_yojson : command -> json
+val command_of_yojson : json -> command or_error
 
 val send : t -> command -> unit
 (** Send a command to the server
@@ -47,7 +51,10 @@ val send : t -> command -> unit
 type event =
   | E_privmsg of irc_end_point * string
   | E_joined of chan
-  [@@deriving yojson, show]
+  [@@deriving show]
+
+val event_to_yojson : event -> json
+val event_of_yojson : json -> event or_error
 
 val receive : t -> event or_error
 (** Receive next even *)

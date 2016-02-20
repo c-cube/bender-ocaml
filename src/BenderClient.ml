@@ -4,6 +4,7 @@
 (** {1 Client} *)
 
 type 'a or_error = [`Ok of 'a | `Error of string]
+type json = Yojson.Safe.json
 
 exception Error of string
 
@@ -39,13 +40,59 @@ let connect_exn ?push_path ?pull_path () =
   | `Ok c -> c
   | `Error e -> fail_ e
 
-type chan = string [@@deriving yojson, show]
-type user = string [@@deriving yojson, show]
+(* Helpers for JSON *)
+module JS = struct
+  exception Err of string
+  let err_ msg = raise (Err msg)
+  let errf_ msg = Format.ksprintf err_ msg
+
+  let l_assoc_ s l : json =
+    try List.assoc s l with Not_found -> errf_ "key %s not found" s
+  let assoc_ s j : json = match j with
+    | `Assoc l -> l_assoc_ s l
+    | _ -> err_ "expected dictionary"
+
+  (* match a variant encoded with rust's conventions *)
+  let read_var : json -> string * json list
+  = function
+    | `Assoc l ->
+        begin match l_assoc_ "variant" l, l_assoc_ "fields" l with
+        | `String s, `List l -> s, l
+        | _ -> err_ "expected variant"
+        end
+    | _ -> err_ "expected variant"
+
+  (* make a variant, with rust's conventions *)
+  let mk_var v args =
+    `Assoc ["variant", `String v; "fields", `List args]
+
+  let guard f j =
+    try `Ok (f j)
+    with Err msg ->
+      let msg = Printf.sprintf "error: %s (json %s)"
+        msg (Yojson.Safe.to_string j) in
+      `Error msg
+end
+
+type chan = string [@@deriving show]
+type user = string [@@deriving show]
 
 type irc_end_point =
   | Chan of chan * user
   | User of user
-  [@@deriving yojson, show]
+  [@@deriving show]
+
+let iep_to_yojson iep : json = match iep with
+  | Chan (c,u) -> JS.mk_var "Chan" [`String c; `String u]
+  | User u -> JS.mk_var "User" [`String u]
+
+let iep_of_yojson_exn : json -> irc_end_point
+  = fun j -> match JS.read_var j with
+  | "Chan", [`String c; `String u] -> Chan (c,u)
+  | "User", [`String u] -> User u
+  | _ -> JS.err_ "expected irc_end_point"
+
+let iep_of_yojson = JS.guard iep_of_yojson_exn
 
 (** Command sent to the server *)
 type command =
@@ -54,7 +101,25 @@ type command =
   | Part of chan
   | Reconnect
   | Exit
-  [@@deriving yojson, show]
+  [@@deriving show]
+
+let command_to_yojson c : json = match c with
+  | Privmsg (iep,msg) -> JS.mk_var "Privmsg" [iep_to_yojson iep; `String msg]
+  | Join c -> JS.mk_var "Join" [`String c]
+  | Part c -> JS.mk_var "Part" [`String c]
+  | Reconnect -> JS.mk_var "Reconnect" []
+  | Exit -> JS.mk_var "Exit" []
+
+let command_of_yojson_exn : json -> command
+  = fun j -> match JS.read_var j with
+  | "Privmsg", [iep; `String msg] -> Privmsg (iep_of_yojson_exn iep, msg)
+  | "Join", [`String c] -> Join c
+  | "Part", [`String c] -> Part c
+  | "Reconnect", [] -> Reconnect
+  | "Exit", [] -> Exit
+  | _ -> JS.err_ "expected command"
+
+let command_of_yojson = JS.guard command_of_yojson_exn
 
 (* TODO: deserialize properly
    {"variant":"Privmsg","fields":[{"variant":"User","fields":["companion_cube"]},"test"]}
@@ -71,7 +136,19 @@ let send t cmd =
 type event =
   | E_privmsg of irc_end_point * string
   | E_joined of chan
-  [@@deriving yojson, show]
+  [@@deriving show]
+
+let event_to_yojson e : json = match e with
+  | E_privmsg (iep, s) -> JS.mk_var "Privmsg" [iep_to_yojson iep; `String s]
+  | E_joined c -> JS.mk_var "Joined" [`String c]
+
+let event_of_yojson_exn : json -> event
+  = fun j -> match JS.read_var j with
+  | "Privmsg", [iep; `String s] -> E_privmsg (iep_of_yojson_exn iep, s)
+  | "Joined", [`String c] -> E_joined c
+  | _ -> JS.err_ "expected event"
+
+let event_of_yojson = JS.guard event_of_yojson_exn
 
 let receive t =
   let open CCError.Infix in

@@ -11,5 +11,5 @@ let () =
   Format.printf "connected@.";
   C.loop_exn c
     ~f:(fun e ->
-      Format.printf "receive event %a@." C.pp_event e)
+      Format.printf "@[<2>receive event@ @[%a@]@]@." C.pp_event e)
 
