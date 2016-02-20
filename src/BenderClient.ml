@@ -26,9 +26,9 @@ let connect
   let res =
     Nanomsg.socket Nanomsg.Push >>= fun push ->
     Nanomsg.socket Nanomsg.Sub >>= fun pull ->
+    Nanomsg.subscribe pull "" >>= fun _ ->
     Nanomsg.connect push (`Ipc push_path) >>= fun _ ->
-    Nanomsg.connect pull (`Ipc pull_path) >>= fun _ ->
-    Nanomsg.subscribe pull "" >|= fun _ ->
+    Nanomsg.connect pull (`Ipc pull_path) >|= fun _ ->
     let c = { push; pull; } in
     c
   in
