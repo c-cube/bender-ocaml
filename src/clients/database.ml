@@ -119,9 +119,11 @@ let init_db db =
 (** {2 Main} *)
 
 let db_ = ref "db"
+let debug_ = ref false
 
 let opts =
   [ "--db", Arg.Set_string db_, " DB file"
+  ; "--debug", Arg.Set debug_, " enable debug logs"
   ] |> List.sort Pervasives.compare |> Arg.align ?limit:None
 
 (* TODO: remove once Logs provides a default reporter *)
@@ -138,7 +140,7 @@ let reporter ppf =
 let () =
   Arg.parse opts (fun _ -> ()) "database [options]";
   Logs.set_reporter (reporter Format.std_formatter);
-  Logs.set_level (Some Logs.Debug);
+  Logs.set_level (Some (if !debug_ then Logs.Debug else Logs.Info));
   Logs.info (fun k->k "open DB `%s`" !db_);
   let db = Sqlite3.db_open !db_ in
   init_db db;
