@@ -112,8 +112,9 @@ let handle_event : t -> C.event -> unit
 let init_db db =
   let _ = Sqlite3.exec db
     "CREATE TABLE IF NOT EXISTS phrases \
-      (quote text constraint c1 not null, \
-       reply text constraint c2 not null);  "
+      (quote text not null, \
+       reply text not null); \
+     CREATE INDEX IF NOT EXISTS ip on phrases (quote); "
   in ()
 
 (** {2 Main} *)
