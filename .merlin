@@ -1,9 +1,13 @@
 S src
-B _build/src
+S src/clients/
+S src/utils/
+B _build/src/**
 PKG ppx_deriving.show
 PKG sqlite3
 PKG logs
 PKG nanomsg
 PKG yojson
 PKG containers
-FLG -w +a-4-44-39
+PKG re
+PKG sequence
+FLG -w +a-4-44-39-29

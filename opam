@@ -24,6 +24,8 @@ depends: [
     "ppx_deriving"
     "sqlite3"
     "logs"
+    "re"
+    "sequence"
 ]
 tags: [ "irc" ]
 homepage: "https://github.com/c-cube/bender-ocaml/"

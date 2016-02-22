@@ -47,6 +47,12 @@ val send : t -> command -> unit
 (** Send a command to the server
     @raise Error on failure *)
 
+val join : t -> chan -> unit
+val part : t -> chan -> unit
+val reconnect : t -> unit
+val exit : t -> unit
+val privmsg : t -> irc_end_point -> string -> unit
+
 (** Event received from the server *)
 type event =
   | E_privmsg of irc_end_point * string

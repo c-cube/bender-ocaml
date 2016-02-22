@@ -133,6 +133,12 @@ let send t cmd =
   | `Ok () -> ()
   | `Error e -> fail_ (nanomsg_err_to_str e)
 
+let join t c = send t (Join c)
+let part t c = send t (Part c)
+let reconnect t = send t Reconnect
+let exit t = send t Exit
+let privmsg t ep msg = send t (Privmsg (ep, msg))
+
 type event =
   | E_privmsg of irc_end_point * string
   | E_joined of chan
