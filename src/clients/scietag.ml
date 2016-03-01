@@ -32,6 +32,7 @@ let mk_pair x y = x,y
 let limit = 3
 
 let interpret_cmd t ep msg =
+  let chan = C.chan_of_ep ep in
   if msg<>"" && msg.[0] = '!'
   then try
     let cmd, arg = Scanf.sscanf msg "!%s@ %s" mk_pair in
@@ -42,35 +43,35 @@ let interpret_cmd t ep msg =
           !search_tag <tag> | search_author <author> | list_authors" in
         C.privmsg t.client ep msg
     | "list_authors" ->
-        let l = Scietag_db.list_authors ~limit:30L t.db in
+        let l = Scietag_db.list_authors ~limit:30L ~chan t.db in
         let msg = CCFormat.sprintf "@[%a@]"
           CCFormat.(list ~start:"" ~stop:"" ~sep:" " string) l in
         C.privmsg t.client ep msg
     | "search_author" ->
         let author = String.trim arg in
-        let l = Scietag_db.find_by_author ~limit:3L t.db author in
+        let l = Scietag_db.find_by_author ~limit:3L ~chan t.db author in
         List.iter
-          (fun (chan,url,tags) ->
-            let msg = CCFormat.sprintf "on %s with tags %a: %s"
-              chan TU.pp_tags tags url in
+          (fun (url,tags) ->
+            let msg = CCFormat.sprintf "with tags %a: %s"
+              TU.pp_tags tags url in
             C.privmsg t.client ep msg)
           l
     | "search_url" ->
         let url = String.trim arg in
-        let l = Scietag_db.find_by_url ~limit:3L t.db url in
+        let l = Scietag_db.find_by_url ~limit:3L ~chan t.db url in
         List.iter
-          (fun (chan,author,tags) ->
-            let msg = CCFormat.sprintf "on %s by %s with tags %a"
-              chan author TU.pp_tags tags in
+          (fun (author,tags) ->
+            let msg = CCFormat.sprintf "by %s with tags %a"
+              author TU.pp_tags tags in
             C.privmsg t.client ep msg)
           l
     | "search_tag" ->
         let tag = Scietag_db.norm_tag arg in
-        let l = Scietag_db.find_by_tag ~limit:3L t.db tag in
+        let l = Scietag_db.find_by_tag ~limit:3L ~chan t.db tag in
         List.iter
-          (fun (author,chan,url) ->
-            let msg = CCFormat.sprintf "on %s by %s: %s "
-              chan author url in
+          (fun (author,url) ->
+            let msg = CCFormat.sprintf "by %s: %s "
+              author url in
             C.privmsg t.client ep msg)
           l
     | _ ->

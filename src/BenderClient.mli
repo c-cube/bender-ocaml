@@ -31,6 +31,10 @@ type irc_end_point =
   | User of user
   [@@deriving show]
 
+val chan_of_ep : irc_end_point -> string
+(** [chan_of_ep ep] returns the chan [c] if [ep = Chan (c,_)], or
+    the user making a privmsg otherwise *)
+
 (** Command sent to the server *)
 type command =
   | Privmsg of irc_end_point * string

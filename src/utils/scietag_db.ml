@@ -117,33 +117,33 @@ let add_tagged_url db t_url =
 let norm_tag t = t |> String.trim |> String.lowercase
 
 (* return the sequence of URLs that contain this tag *)
-let find_by_tag ~limit db tag : (author * chan * url) list =
+let find_by_tag ~limit ~chan db tag : (author * url) list =
   let tag = norm_tag tag in
   let c = DU.exec_a db
-    "SELECT author, chan, u.url
+    "SELECT author, u.url
       FROM scietag_urls u JOIN scietag_tags t ON u.id = t.url
-      WHERE t.tag = ?
+      WHERE t.tag = ? and chan = ?
       LIMIT ? ; "
-    [| D.TEXT tag; D.INT limit |]
+    [| D.TEXT tag; D.TEXT chan; D.INT limit |]
   in
   DU.Cursor.to_list_rev c
     |> List.rev_map
       (function
-        | [| D.TEXT author; D.TEXT chan; D.TEXT url |] -> author,chan,url
+        | [| D.TEXT author; D.TEXT url |] -> author,url
         | _ -> assert false)
 
-let find_by_author ~limit db a : (chan * url * tag list) list =
+let find_by_author ~limit ~chan db a : (url * tag list) list =
   let l = DU.exec_a db
-    "ELECT chan, url, id
+    "SELECT url, id
       FROM scietag_urls
-      WHERE author = ?
+      WHERE author = ? and chan = ?
       LIMIT ? ; "
-    [| D.TEXT a; D.INT limit |]
+    [| D.TEXT a; D.TEXT chan; D.INT limit |]
     |> DU.Cursor.to_list_rev
   in
   List.rev_map
     (function
-      | [| D.TEXT chan; D.TEXT url; id |] ->
+      | [| D.TEXT url; id |] ->
           let tags = DU.exec_a db
             "SELECT tag from scietag_tags WHERE url = ?" [| id |]
             |> DU.Cursor.to_list_rev
@@ -152,22 +152,22 @@ let find_by_author ~limit db a : (chan * url * tag list) list =
                 | [| D.TEXT tag |] -> tag
                 | _ -> assert false)
           in
-          chan, url, tags
+          url, tags
       | _ -> assert false)
     l
 
-let find_by_url ~limit db u : (chan * author * tag list) list =
+let find_by_url ~limit ~chan db u : (author * tag list) list =
   let l = DU.exec_a db
-    "SELECT chan, author, id
+    "SELECT author, id
       FROM scietag_urls
-      WHERE url = ?
+      WHERE url = ? and chan = ?
       LIMIT ? ; "
-    [| D.TEXT u; D.INT limit |]
+    [| D.TEXT u; D.TEXT chan; D.INT limit |]
     |> DU.Cursor.to_list_rev
   in
   List.rev_map
     (function
-      | [| D.TEXT chan; D.TEXT author; id |] ->
+      | [| D.TEXT author; id |] ->
           let tags = DU.exec_a db
             "SELECT tag from scietag_tags WHERE url = ?" [| id |]
             |> DU.Cursor.to_list_rev
@@ -176,13 +176,13 @@ let find_by_url ~limit db u : (chan * author * tag list) list =
                 | [| D.TEXT tag |] -> tag
                 | _ -> assert false)
           in
-          chan, author, tags
+          author, tags
       | _ -> assert false)
     l
 
-let list_authors ~limit db : author list =
-  DU.exec_a db "SELECT DISTINCT author FROM scietag_urls LIMIT ? ;"
-    [| D.INT limit |]
+let list_authors ~limit ~chan db : author list =
+  DU.exec_a db "SELECT DISTINCT author FROM scietag_urls WHERE chan = ? LIMIT ? ;"
+    [| D.TEXT chan; D.INT limit |]
     |> DU.Cursor.to_list_rev
     |> List.rev_map
       (function

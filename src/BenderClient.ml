@@ -94,6 +94,10 @@ let iep_of_yojson_exn : json -> irc_end_point
 
 let iep_of_yojson = JS.guard iep_of_yojson_exn
 
+let chan_of_ep = function
+  | Chan (c,_) -> c
+  | User u -> u
+
 (** Command sent to the server *)
 type command =
   | Privmsg of irc_end_point * string

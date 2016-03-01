@@ -25,14 +25,10 @@ let pick_list = function
 
 let norm_key k = String.trim k |> String.lowercase
 
-let chan_of_ep = function
-  | C.Chan (c,_) -> c
-  | C.User u -> u
-
 (* search for replies to [msg] and send them to [reply_to] *)
 let search_for_replies t ~reply_to msg =
   let msg = norm_key msg in
-  let chan = chan_of_ep reply_to in
+  let chan = C.chan_of_ep reply_to in
   (* find corresponding replies *)
   let l =
     DU.exec_a t.db "SELECT reply FROM phrases WHERE quote=? and chan=?"
@@ -52,7 +48,7 @@ let mk_pair x y = x,y
 let update t ~reply_to msg =
   let reply msg = C.privmsg t.client reply_to msg in
   let replyf msg = Printf.ksprintf reply msg in
-  let chan = chan_of_ep reply_to in
+  let chan = C.chan_of_ep reply_to in
   try
     if msg<>"" && msg.[0] = '!'
     then
