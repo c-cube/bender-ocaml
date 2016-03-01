@@ -28,19 +28,21 @@ let norm_key k = String.trim k |> String.lowercase
 (* search for replies to [msg] and send them to [reply_to] *)
 let search_for_replies t ~reply_to msg =
   let msg = norm_key msg in
-  let chan = C.chan_of_ep reply_to in
+  let chan = C.chan_of_ep reply_to |> String.trim in
   (* find corresponding replies *)
   let l =
-    DU.exec_a t.db "SELECT reply FROM phrases WHERE quote=? and chan=?"
+    DU.exec_a t.db "SELECT reply FROM phrases WHERE quote=? and chan=? ;"
       [| D.TEXT msg; D.TEXT chan |]
     |> DU.Cursor.to_list_rev
+    |> List.map (function [| D.TEXT rep |] -> rep | _ -> assert false)
   in
+  Logs.debug (fun k->k "seek replies for '%s' on '%s':@ found [%a]"
+                 msg chan CCFormat.(list string) l);
   match pick_list l with
     | None -> ()
-    | Some [| D.TEXT rep |] ->
+    | Some rep ->
         Logs.debug (fun k->k "picked reply %s to %s" msg rep);
         C.privmsg t.client reply_to rep
-    | Some _ -> assert false
 
 let mk_pair x y = x,y
 

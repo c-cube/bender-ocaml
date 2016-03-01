@@ -40,9 +40,10 @@ module Cursor = struct
   let next c = match c.cur with
     | None -> None
     | Some _ ->
-        let res = next_ c.stmt in
-        c.cur <- res;
-        if res = None then check_ret (Sqlite3.finalize c.stmt);
+        let res = c.cur in
+        let next = next_ c.stmt in
+        c.cur <- next;
+        if next = None then check_ret (Sqlite3.finalize c.stmt);
         res
 
   let junk c = ignore (next c)
