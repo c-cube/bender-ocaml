@@ -25,11 +25,20 @@ let pick_list = function
 
 let norm_key k = String.trim k |> String.lowercase
 
+let chan_of_ep = function
+  | C.Chan (c,_) -> c
+  | C.User u -> u
+
 (* search for replies to [msg] and send them to [reply_to] *)
 let search_for_replies t ~reply_to msg =
   let msg = norm_key msg in
+  let chan = chan_of_ep reply_to in
   (* find corresponding replies *)
-  let l = DU.exec1 t.db "select reply from phrases where quote=?" (D.TEXT msg) in
+  let l =
+    DU.exec_a t.db "SELECT reply FROM phrases WHERE quote=? and chan=?"
+      [| D.TEXT msg; D.TEXT chan |]
+    |> DU.Cursor.to_list_rev
+  in
   match pick_list l with
     | None -> ()
     | Some [| D.TEXT rep |] ->
@@ -43,6 +52,7 @@ let mk_pair x y = x,y
 let update t ~reply_to msg =
   let reply msg = C.privmsg t.client reply_to msg in
   let replyf msg = Printf.ksprintf reply msg in
+  let chan = chan_of_ep reply_to in
   try
     if msg<>"" && msg.[0] = '!'
     then
@@ -59,14 +69,14 @@ let update t ~reply_to msg =
           let quote, reply = Scanf.sscanf arg "%s@|%s" mk_pair in
           let quote = norm_key quote and reply = String.trim reply in
           Logs.info (fun k->k "add fact `%s` -> `%s`" quote reply);
-          DU.exec_a t.db "insert into phrases values (?, ?); "
-            [| D.TEXT quote; D.TEXT reply |]
+          DU.exec_a t.db "INSERT INTO phrases VALUES (?, ?, ?); "
+            [| D.TEXT quote; D.TEXT reply; D.TEXT chan |]
             |> DU.Cursor.close;
           replyf "added `%s` -> `%s`" quote reply
       | "remove" ->
           let arg = norm_key arg in
           Logs.info (fun k->k "remove facts for `%s`" arg);
-          DU.exec_a t.db "delete from phrases where quote=?" [| D.TEXT arg |]
+          DU.exec_a t.db "DELETE FROM phrases WHERE quote=?" [| D.TEXT arg |]
             |> DU.Cursor.close;
           let n = Sqlite3.changes t.db in
           replyf "removed %d rules for `%s`" n arg
@@ -90,7 +100,8 @@ let init_db db =
   let _ = Sqlite3.exec db
     "CREATE TABLE IF NOT EXISTS phrases \
       (quote text not null, \
-       reply text not null); \
+       reply text not null,
+       chan text not null); \
      CREATE INDEX IF NOT EXISTS ip on phrases (quote); "
   in ()
 
