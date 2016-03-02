@@ -58,7 +58,7 @@ let update t ~reply_to msg =
       match cmd with
       | "help" ->
           begin match String.trim arg with
-          | "" -> reply "commands: !add !help !remove"
+          | "" -> reply "database: !add !help !remove"
           | "add" | "!add" -> reply "usage: !add key|reply"
           | "remove" | "!remove" -> reply "usage: !remove key"
           | _ -> replyf "cannot find help for command `%s`" arg
