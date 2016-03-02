@@ -54,7 +54,7 @@ let update t ~reply_to msg =
   try
     if msg<>"" && msg.[0] = '!'
     then
-      let cmd, arg = Scanf.sscanf msg "!%s@ %s" mk_pair in
+      let cmd, arg = Scanf.sscanf msg "!%s@ %s@\n" mk_pair in
       match cmd with
       | "help" ->
           begin match String.trim arg with
