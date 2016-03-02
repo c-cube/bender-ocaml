@@ -64,7 +64,7 @@ let update t ~reply_to msg =
           | _ -> replyf "cannot find help for command `%s`" arg
           end
       | "add" ->
-          let quote, reply = Scanf.sscanf arg "%s@|%s" mk_pair in
+          let quote, reply = Scanf.sscanf arg "%s@|%s@\n" mk_pair in
           let quote = norm_key quote and reply = String.trim reply in
           Logs.info (fun k->k "add fact `%s` -> `%s`" quote reply);
           DU.exec_a t.db "INSERT INTO phrases VALUES (?, ?, ?); "

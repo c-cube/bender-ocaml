@@ -40,7 +40,7 @@ let interpret_cmd t ep msg =
     | "help" ->
         let msg =
           "scietag: !search_url <url> | !help | \
-          !search_tag <tag> | search_author <author> | list_authors" in
+          !search_tag <tag> | !search_author <author> | !list_authors" in
         C.privmsg t.client ep msg
     | "list_authors" ->
         let l = Scietag_db.list_authors ~limit:30L ~chan t.db in
