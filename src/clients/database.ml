@@ -80,7 +80,7 @@ let update t ~reply_to msg =
           replyf "removed %d rules for `%s`" n arg
       | x ->
           Logs.err (fun k->k "unknown command %s" x);
-          replyf "unknown command `%s`" cmd
+          ()
   with e ->
     Logs.err
       (fun k->k "error reading command %s: %s" msg (Printexc.to_string e))

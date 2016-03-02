@@ -75,7 +75,7 @@ let interpret_cmd t ep msg =
             C.privmsg t.client ep msg)
           l
     | _ ->
-        C.privmsg t.client ep (CCFormat.sprintf "unknown command `%s`" cmd)
+        Logs.err (fun k->k "unknown command `%s`" cmd)
   with Scanf.Scan_failure _ | End_of_file -> ()
 
 let handle_event t e = match e with
