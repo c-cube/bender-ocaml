@@ -118,7 +118,7 @@ let () =
   Logs.set_reporter (Utils.reporter Format.std_formatter);
   Logs.set_level (Some (if !debug_ then Logs.Debug else Logs.Info));
   Logs.info (fun k->k "open DB `%s`" !db_);
-  let db = Sqlite3.db_open !db_ in
+  let db = Sqlite3.db_open ~mutex:`FULL !db_ in
   init_db db;
   Logs.info (fun k->k "connecting to bender...");
   let c = C.connect_exn () in

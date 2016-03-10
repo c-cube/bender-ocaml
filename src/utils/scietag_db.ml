@@ -53,7 +53,7 @@ module Tagged_URL = struct
 end
 
 let create file : t =
-  let db = Sqlite3.db_open file in
+  let db = Sqlite3.db_open ~mutex:`FULL file in
   Logs.debug (fun k->k "opened DB file %s" file);
   Sqlite3.exec db
     "CREATE TABLE IF NOT EXISTS scietag_urls
