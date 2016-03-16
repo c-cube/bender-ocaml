@@ -33,7 +33,7 @@ let search_for_replies t ~reply_to msg =
   let l =
     DU.exec_a t.db "SELECT reply FROM phrases WHERE quote=? and chan=? ;"
       [| D.TEXT msg; D.TEXT chan |]
-    |> DU.Cursor.to_list_rev
+      ~f:DU.Cursor.to_list_rev
     |> List.map (function [| D.TEXT rep |] -> rep | _ -> assert false)
   in
   Logs.debug (fun k->k "seek replies for '%s' on '%s':@ found [%a]"
@@ -69,13 +69,13 @@ let update t ~reply_to msg =
           Logs.info (fun k->k "add fact `%s` -> `%s`" quote reply);
           DU.exec_a t.db "INSERT INTO phrases VALUES (?, ?, ?); "
             [| D.TEXT quote; D.TEXT reply; D.TEXT chan |]
-            |> DU.Cursor.close;
+            ~f:DU.Cursor.close;
           replyf "added `%s` -> `%s`" quote reply
       | "remove" ->
           let arg = norm_key arg in
           Logs.info (fun k->k "remove facts for `%s`" arg);
           DU.exec_a t.db "DELETE FROM phrases WHERE quote=?" [| D.TEXT arg |]
-            |> DU.Cursor.close;
+            ~f:DU.Cursor.close;
           let n = Sqlite3.changes t.db in
           replyf "removed %d rules for `%s`" n arg
       | x ->

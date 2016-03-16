@@ -69,25 +69,39 @@ module Cursor = struct
   let to_list c = List.rev (to_list_rev c)
 end
 
+let finally_ ~h ~f x =
+  try
+    let y = f x in
+    h();
+    y
+  with e ->
+    h();
+    raise e
+
+let with_stmt db str ~f =
+  let stmt = Sqlite3.prepare db str in
+  finally_
+    ~h:(fun () -> Sqlite3.finalize stmt |> check_ret)
+    ~f stmt
+
 (* execute statement, return cursor *)
-let exec db stmt : Cursor.t =
-  let stmt = Sqlite3.prepare db stmt in
-  assert (Sqlite3.bind_parameter_count stmt = 0);
-  Cursor.make stmt
+let exec db str ~f =
+  with_stmt db str
+    ~f:(fun stmt ->
+      assert (Sqlite3.bind_parameter_count stmt = 0);
+      f (Cursor.make stmt))
 
 (* execute statement parametrized by the array of arguments *)
-let exec_a db stmt a : Cursor.t =
-  let stmt = Sqlite3.prepare db stmt in
-  if Sqlite3.bind_parameter_count stmt <> Array.length a
-    then invalid_arg
-      (Format.sprintf "exec_a: wrong number of arguments, expected %d, got %d"
-        (Sqlite3.bind_parameter_count stmt) (Array.length a));
-  Array.iteri (fun i x -> ignore (Sqlite3.bind stmt (i+1) x)) a;
-  Cursor.make stmt
+let exec_a db str a ~f =
+  with_stmt db str
+    ~f:(fun stmt ->
+      if Sqlite3.bind_parameter_count stmt <> Array.length a
+        then invalid_arg
+          (Format.sprintf "exec_a: wrong number of arguments, expected %d, got %d"
+            (Sqlite3.bind_parameter_count stmt) (Array.length a));
+        Array.iteri (fun i x -> ignore (Sqlite3.bind stmt (i+1) x)) a;
+        f (Cursor.make stmt))
 
 (* execute statement with 1 param, return rows *)
-let exec1 db stmt x : _ list =
-  let stmt = Sqlite3.prepare db stmt in
-  ignore (Sqlite3.bind stmt 1 x);
-  let c = Cursor.make stmt in
-  Cursor.to_list c
+let exec1 db str x : _ list =
+  exec_a db str [| x |] ~f:Cursor.to_list

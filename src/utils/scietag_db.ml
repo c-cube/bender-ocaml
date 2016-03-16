@@ -95,11 +95,10 @@ let add_tagged_url db t_url =
       VALUES            ( ?, ?, ?, NULL);
     "
     [| D.TEXT t_url.author; D.TEXT t_url.chan; D.TEXT t_url.url |]
-    |> DU.Cursor.close;
+    ~f:DU.Cursor.close;
   (* get last ID *)
   let id =
-    DU.exec db "SELECT last_insert_rowid();"
-    |> DU.Cursor.head_exn
+    DU.exec db "SELECT last_insert_rowid();" ~f:DU.Cursor.head_exn
     |> (function
         | [| D.INT i |] -> i
         | _ -> assert false)
@@ -109,7 +108,7 @@ let add_tagged_url db t_url =
       DU.exec_a db
         "INSERT INTO scietags_tags ( tag, url ) VALUES ( ?, ? ); "
         [| D.TEXT tag; D.INT id |]
-      |> DU.Cursor.close)
+      ~f:DU.Cursor.close)
     t_url.tags;
   ()
 
@@ -119,18 +118,19 @@ let norm_tag t = t |> String.trim |> String.lowercase
 (* return the sequence of URLs that contain this tag *)
 let find_by_tag ~limit ~chan db tag : (author * url) list =
   let tag = norm_tag tag in
-  let c = DU.exec_a db
+  let l = DU.exec_a db
     "SELECT author, u.url
       FROM scietag_urls u JOIN scietag_tags t ON u.id = t.url
       WHERE t.tag = ? and chan = ?
       LIMIT ? ; "
     [| D.TEXT tag; D.TEXT chan; D.INT limit |]
+    ~f:DU.Cursor.to_list_rev
   in
-  DU.Cursor.to_list_rev c
-    |> List.rev_map
-      (function
-        | [| D.TEXT author; D.TEXT url |] -> author,url
-        | _ -> assert false)
+  List.rev_map
+    (function
+      | [| D.TEXT author; D.TEXT url |] -> author,url
+      | _ -> assert false)
+    l
 
 let find_by_author ~limit ~chan db a : (url * tag list) list =
   let l = DU.exec_a db
@@ -139,14 +139,14 @@ let find_by_author ~limit ~chan db a : (url * tag list) list =
       WHERE author = ? and chan = ?
       LIMIT ? ; "
     [| D.TEXT a; D.TEXT chan; D.INT limit |]
-    |> DU.Cursor.to_list_rev
+    ~f:DU.Cursor.to_list_rev
   in
   List.rev_map
     (function
       | [| D.TEXT url; id |] ->
           let tags = DU.exec_a db
             "SELECT tag from scietag_tags WHERE url = ?" [| id |]
-            |> DU.Cursor.to_list_rev
+            ~f:DU.Cursor.to_list_rev
             |> List.rev_map
               (function
                 | [| D.TEXT tag |] -> tag
@@ -163,14 +163,14 @@ let find_by_url ~limit ~chan db u : (author * tag list) list =
       WHERE url = ? and chan = ?
       LIMIT ? ; "
     [| D.TEXT u; D.TEXT chan; D.INT limit |]
-    |> DU.Cursor.to_list_rev
+    ~f:DU.Cursor.to_list_rev
   in
   List.rev_map
     (function
       | [| D.TEXT author; id |] ->
           let tags = DU.exec_a db
             "SELECT tag from scietag_tags WHERE url = ?" [| id |]
-            |> DU.Cursor.to_list_rev
+            ~f:DU.Cursor.to_list_rev
             |> List.rev_map
               (function
                 | [| D.TEXT tag |] -> tag
@@ -183,7 +183,7 @@ let find_by_url ~limit ~chan db u : (author * tag list) list =
 let list_authors ~limit ~chan db : author list =
   DU.exec_a db "SELECT DISTINCT author FROM scietag_urls WHERE chan = ? LIMIT ? ;"
     [| D.TEXT chan; D.INT limit |]
-    |> DU.Cursor.to_list_rev
+    ~f:DU.Cursor.to_list_rev
     |> List.rev_map
       (function
         | [| D.TEXT a |] -> a
