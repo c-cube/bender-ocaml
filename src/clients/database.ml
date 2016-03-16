@@ -69,13 +69,13 @@ let update t ~reply_to msg =
           Logs.info (fun k->k "add fact `%s` -> `%s`" quote reply);
           DU.exec_a t.db "INSERT INTO phrases VALUES (?, ?, ?); "
             [| D.TEXT quote; D.TEXT reply; D.TEXT chan |]
-            ~f:DU.Cursor.close;
+            ~f:DU.Cursor.nop;
           replyf "added `%s` -> `%s`" quote reply
       | "remove" ->
           let arg = norm_key arg in
           Logs.info (fun k->k "remove facts for `%s`" arg);
           DU.exec_a t.db "DELETE FROM phrases WHERE quote=?" [| D.TEXT arg |]
-            ~f:DU.Cursor.close;
+            ~f:DU.Cursor.nop;
           let n = Sqlite3.changes t.db in
           replyf "removed %d rules for `%s`" n arg
       | x ->
@@ -119,6 +119,7 @@ let () =
   Logs.set_level (Some (if !debug_ then Logs.Debug else Logs.Info));
   Logs.info (fun k->k "open DB `%s`" !db_);
   let db = Sqlite3.db_open ~mutex:`FULL !db_ in
+  Sql_utils.setup_timeout db;
   init_db db;
   Logs.info (fun k->k "connecting to bender...");
   let c = C.connect_exn () in

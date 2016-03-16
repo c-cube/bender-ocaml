@@ -54,6 +54,7 @@ end
 
 let create file : t =
   let db = Sqlite3.db_open ~mutex:`FULL file in
+  Sql_utils.setup_timeout db;
   Logs.debug (fun k->k "opened DB file %s" file);
   Sqlite3.exec db
     "CREATE TABLE IF NOT EXISTS scietag_urls
@@ -95,7 +96,7 @@ let add_tagged_url db t_url =
       VALUES            ( ?, ?, ?, NULL);
     "
     [| D.TEXT t_url.author; D.TEXT t_url.chan; D.TEXT t_url.url |]
-    ~f:DU.Cursor.close;
+    ~f:DU.Cursor.nop;
   (* get last ID *)
   let id =
     DU.exec db "SELECT last_insert_rowid();" ~f:DU.Cursor.head_exn
@@ -108,7 +109,7 @@ let add_tagged_url db t_url =
       DU.exec_a db
         "INSERT INTO scietags_tags ( tag, url ) VALUES ( ?, ? ); "
         [| D.TEXT tag; D.INT id |]
-      ~f:DU.Cursor.close)
+      ~f:DU.Cursor.nop)
     t_url.tags;
   ()
 

@@ -16,6 +16,10 @@ let check_ret = function
   | Sqlite3.Rc.OK -> ()
   | rc -> raise (RcError rc)
 
+(* on "busy", wait 300ms before failing *)
+let setup_timeout db =
+  Sqlite3.busy_timeout db 300
+
 module Cursor = struct
   type t = {
     stmt: Sqlite3.stmt;
@@ -33,8 +37,6 @@ module Cursor = struct
     { stmt;
       cur = next_ stmt;
     }
-
-  let close c = check_ret (Sqlite3.finalize c.stmt)
 
   (* next value in the cursor *)
   let next c = match c.cur with
@@ -55,6 +57,8 @@ module Cursor = struct
   let rec iter ~f c = match c.cur with
     | None -> ()
     | Some res -> f res; junk c; iter ~f c
+
+  let nop (_:t) = ()
 
   (* convert a cursor into a list of answers *)
   let to_list_rev
