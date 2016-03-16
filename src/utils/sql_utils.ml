@@ -45,7 +45,6 @@ module Cursor = struct
         let res = c.cur in
         let next = next_ c.stmt in
         c.cur <- next;
-        if next = None then check_ret (Sqlite3.finalize c.stmt);
         res
 
   let junk c = ignore (next c)
@@ -99,11 +98,11 @@ let exec db str ~f =
 let exec_a db str a ~f =
   with_stmt db str
     ~f:(fun stmt ->
-      if Sqlite3.bind_parameter_count stmt <> Array.length a
-        then invalid_arg
-          (Format.sprintf "exec_a: wrong number of arguments, expected %d, got %d"
-            (Sqlite3.bind_parameter_count stmt) (Array.length a));
-        Array.iteri (fun i x -> ignore (Sqlite3.bind stmt (i+1) x)) a;
+        if Sqlite3.bind_parameter_count stmt <> Array.length a
+          then invalid_arg
+            (Format.sprintf "exec_a: wrong number of arguments, expected %d, got %d"
+              (Sqlite3.bind_parameter_count stmt) (Array.length a));
+        Array.iteri (fun i x -> check_ret (Sqlite3.bind stmt (i+1) x)) a;
         f (Cursor.make stmt))
 
 (* execute statement with 1 param, return rows *)
